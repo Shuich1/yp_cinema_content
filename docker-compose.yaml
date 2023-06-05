@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  content-delivery-redis:
+    image: redis:7.0.8
+    healthcheck:
+      test: ["CMD", "redis-cli","ping"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+    expose:
+      - "6379"
+
+  content-delivery-fastapi:
+      build: ./content_delivery
+      healthcheck:
+        test: [ "CMD-SHELL", "curl --silent ${FASTAPI_HOST}:${FASTAPI_PORT} -H 'X-Request-Id: healthcheck' >/dev/null || exit 1" ]
+        interval: 30s
+        timeout: 5s
+        retries: 5
+      env_file:
+        - .env
+      depends_on:
+        content-delivery-redis:
+          condition: service_healthy
+      expose:
+        - "80"
